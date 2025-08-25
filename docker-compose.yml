@@ -1,0 +1,190 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: aigym_postgres
+    environment:
+      POSTGRES_DB: aigym_coach
+      POSTGRES_USER: aigym_user
+      POSTGRES_PASSWORD: aigym_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - aigym_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aigym_user -d aigym_coach"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: aigym_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - aigym_network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: aigym_backend
+    environment:
+      - DATABASE_URL=postgresql://aigym_user:aigym_password@postgres:5432/aigym_coach
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - ENVIRONMENT=development
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - aigym_network
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend (Telegram Mini App)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: aigym_frontend
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - aigym_network
+    command: npm run dev
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: aigym_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./infrastructure/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - aigym_network
+
+  # Celery Worker (для фоновых задач)
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: aigym_celery_worker
+    environment:
+      - DATABASE_URL=postgresql://aigym_user:aigym_password@postgres:5432/aigym_coach
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ENVIRONMENT=development
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - aigym_network
+    command: celery -A app.core.celery worker --loglevel=info
+
+  # Celery Beat (для периодических задач)
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: aigym_celery_beat
+    environment:
+      - DATABASE_URL=postgresql://aigym_user:aigym_password@postgres:5432/aigym_coach
+      - REDIS_URL=redis://redis:6379
+      - ENVIRONMENT=development
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - aigym_network
+    command: celery -A app.core.celery beat --loglevel=info
+
+  # Monitoring (Grafana + Prometheus)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: aigym_grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./infrastructure/monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - aigym_network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: aigym_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - aigym_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  grafana_data:
+  prometheus_data:
+
+networks:
+  aigym_network:
+    driver: bridge 

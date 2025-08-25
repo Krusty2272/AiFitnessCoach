@@ -1,0 +1,42 @@
+# =============================================================================
+# AIGym Coach - Минимальные зависимости для MVP
+# =============================================================================
+# 
+# Только самые необходимые пакеты для базового функционала.
+# Добавляйте зависимости по мере развития проекта.
+# 
+# Для разработки: pip install -r requirements-dev.txt
+# Для продакшена: pip install -r requirements-prod.txt
+# =============================================================================
+
+# Core Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Database
+sqlalchemy==2.0.23
+alembic==1.12.1
+psycopg2-binary==2.9.9
+
+# Environment
+python-dotenv==1.0.0
+
+# Telegram Integration
+python-telegram-bot==20.7
+
+# HTTP Client
+httpx==0.25.2
+
+# Validation
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# AI Services (базовые)
+openai==1.3.5
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Utilities
+python-dateutil==2.8.2 

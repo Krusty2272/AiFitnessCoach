@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(npm install)",
+      "Bash(python:*)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(mkdir:*)",
+      "Bash(touch:*)",
+      "Bash(npm install:*)",
+      "Bash(rm:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": [],
+    "defaultMode": "acceptEdits"
+  }
+}

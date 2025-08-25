@@ -1,0 +1,95 @@
+# =============================================================================
+# Production Dependencies
+# =============================================================================
+
+# Include base requirements
+-r requirements.txt
+
+# Production Server
+gunicorn==21.2.0
+
+# Monitoring and Observability
+sentry-sdk[fastapi]==1.38.0
+prometheus-client==0.19.0
+
+# Performance
+orjson==3.9.10
+ujson==5.8.0
+
+# Security
+cryptography==41.0.8
+
+# Health Checks
+healthcheck==1.3.0
+
+# Rate Limiting
+slowapi==0.1.9
+
+# Caching
+redis==5.0.1
+aioredis==2.0.1
+
+# Background Tasks
+celery==5.3.4
+flower==2.0.1
+
+# File Storage
+boto3==1.34.0
+
+# Email
+sendgrid==6.10.0
+jinja2==3.1.2
+
+# Payment Processing
+stripe==7.8.0
+
+# Telegram Integration
+python-telegram-bot==20.7
+
+# AI Services
+openai==1.3.5
+anthropic==0.7.7
+langchain==0.0.340
+langchain-openai==0.0.2
+langchain-anthropic==0.0.1
+
+# Image Processing
+Pillow==10.1.0
+opencv-python-headless==4.8.1.78
+
+# Data Processing
+numpy==1.25.2
+pandas==2.1.3
+scikit-learn==1.3.2
+scipy==1.11.4
+
+# Database Extensions (для продакшена)
+pgvector==0.2.4
+timescaledb==0.1.0
+
+# Circuit Breaker
+pybreaker==0.4.0
+
+# Retry Logic
+tenacity==8.2.3
+
+# Cache Management
+cachetools==5.3.2
+
+# Feature Flags
+unleash-client==5.8.0
+
+# Logging
+structlog==23.2.0
+
+# HTTP Client
+httpx==0.25.2
+aiohttp==3.9.1
+
+# Utilities
+python-dateutil==2.8.2
+pytz==2023.3
+click==8.1.7
+PyYAML==6.0.1
+urllib3==2.1.0
+requests==2.31.0 

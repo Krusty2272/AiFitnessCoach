@@ -1,0 +1,303 @@
+{
+    "name": "AI Prompt Engineer Bot",
+    "nodes": [
+      {
+        "parameters": {
+          "events": "message",
+          "filters": {
+            "text": "/start"
+          }
+        },
+        "name": "1. Start Bot",
+        "type": "n8n-nodes-base.telegramTrigger",
+        "typeVersion": 1,
+        "position": [
+          450,
+          300
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+            "name": "Telegram Credentials"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "chatId": "={{$json.message.chat.id}}",
+          "text": "Выберите модель ИИ, для которой нужно составить промпт:",
+          "replyMarkup": "inlineKeyboard",
+          "inlineKeyboard": {
+            "inlineKeyboard": [
+              [
+                {
+                  "text": "Claude 3 Sonnet",
+                  "callback_data": "claude_3_sonnet"
+                },
+                {
+                  "text": "GPT-4o",
+                  "callback_data": "gpt_4o"
+                }
+              ],
+              [
+                {
+                  "text": "Gemini 1.5 Pro",
+                  "callback_data": "gemini_1_5_pro"
+                }
+              ]
+            ]
+          }
+        },
+        "name": "2. Send AI Choice",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [
+          680,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "events": "callbackQuery"
+        },
+        "name": "3. Catch AI Choice",
+        "type": "n8n-nodes-base.telegramTrigger",
+        "typeVersion": 1,
+        "position": [
+          450,
+          500
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+            "name": "Telegram Credentials"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "values": {
+            "string": [
+              {
+                "name": "selected_ai",
+                "value": "={{$json.callback_query.data}}"
+              },
+              {
+                "name": "chat_id",
+                "value": "={{$json.callback_query.message.chat.id}}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "name": "4. Set AI Model",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 1,
+        "position": [
+          680,
+          500
+        ]
+      },
+      {
+        "parameters": {
+          "chatId": "={{$node[\"4. Set AI Model\"].json.chat_id}}",
+          "text": "Отлично. Теперь кратко опишите вашу задачу. Например: \"Создать лендинговую страницу для SaaS продукта\""
+        },
+        "name": "5. Ask For Initial Task",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [
+          900,
+          500
+        ]
+      },
+      {
+        "parameters": {
+          "events": "message"
+        },
+        "name": "6. Catch Initial Task",
+        "type": "n8n-nodes-base.telegramTrigger",
+        "typeVersion": 1,
+        "position": [
+          450,
+          700
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+            "name": "Telegram Credentials"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "model": "gpt-4-turbo",
+          "jsonResponse": false,
+          "promptSystem": "Ты — ассистент по созданию промптов. Получив от пользователя краткое описание задачи, сгенерируй 3-5 ключевых уточняющих вопросов, чтобы собрать максимум информации для составления детального промпта. Возвращай только нумерованный список вопросов, без лишних фраз.",
+          "promptUser": "Задача пользователя: {{$json.message.text}}",
+          "options": {}
+        },
+        "name": "7. Generate Clarifying Questions",
+        "type": "n8n-nodes-base.openAiChat",
+        "typeVersion": 1,
+        "position": [
+          680,
+          700
+        ],
+        "credentials": {
+          "openAiApi": {
+            "id": "YOUR_OPENAI_CREDENTIALS_ID",
+            "name": "OpenAI Credentials"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "chatId": "={{$json.message.chat.id}}",
+          "text": "=Чтобы составить качественный промпт, ответьте, пожалуйста, на следующие вопросы (можно одним сообщением):\n\n{{$node[\"7. Generate Clarifying Questions\"].json.choices[0].message.content}}"
+        },
+        "name": "8. Send Clarifying Questions",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [
+          900,
+          700
+        ]
+      },
+      {
+        "parameters": {
+          "events": "message"
+        },
+        "name": "9. Catch User Answers",
+        "type": "n8n-nodes-base.telegramTrigger",
+        "typeVersion": 1,
+        "position": [
+          450,
+          900
+        ],
+        "notes": "Этот триггер ловит финальные ответы. В реальном workflow потребуется механизм (например, Wait или DB), чтобы связать эти ответы с ранее сохраненными `selected_ai` и `initial_prompt` по `chat_id`.",
+        "credentials": {
+          "telegramApi": {
+            "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+            "name": "Telegram Credentials"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "model": "gpt-4o",
+          "jsonResponse": true,
+          "promptSystem": "Ты — эксперт по промпт-инжинирингу. Твоя задача — преобразовать информацию от пользователя в структурированный JSON-промпт, оптимизированный для конкретной ИИ-модели. JSON должен содержать все ключевые аспекты задачи. Не добавляй никаких пояснений или комментариев. Верни только чистый JSON-объект.",
+          "promptUser": "=Создай JSON-промпт на основе следующих данных:\n\n- Целевая модель ИИ: {{placeholder_for_selected_ai}}\n- Исходная задача: {{placeholder_for_initial_task}}\n- Ответы пользователя на уточняющие вопросы: {{$json.message.text}}\n\nСтруктура JSON должна быть логичной и детальной. Адаптируй структуру под исходную задачу.",
+          "options": {}
+        },
+        "name": "10. Generate Final JSON",
+        "type": "n8n-nodes-base.openAiChat",
+        "typeVersion": "1.1",
+        "position": [
+          680,
+          900
+        ],
+        "notes": "В реальном workflow плейсхолдеры {{placeholder_for...}} должны быть заменены на реальные данные, полученные из предыдущих веток с помощью Merge ноды или внешнего хранилища.",
+        "credentials": {
+          "openAiApi": {
+            "id": "YOUR_OPENAI_CREDENTIALS_ID",
+            "name": "OpenAI Credentials"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "chatId": "={{$json.message.chat.id}}",
+          "text": "=Ваш профессиональный промпт готов:\n```json\n{{JSON.stringify($node[\"10. Generate Final JSON\"].json.choices[0].message.content, null, 2)}}\n```",
+          "parseMode": "MarkdownV2"
+        },
+        "name": "11. Send Final Result",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [
+          900,
+          900
+        ]
+      }
+    ],
+    "connections": {
+      "1. Start Bot": {
+        "main": [
+          [
+            {
+              "node": "2. Send AI Choice",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "3. Catch AI Choice": {
+        "main": [
+          [
+            {
+              "node": "4. Set AI Model",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "4. Set AI Model": {
+        "main": [
+          [
+            {
+              "node": "5. Ask For Initial Task",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "6. Catch Initial Task": {
+        "main": [
+          [
+            {
+              "node": "7. Generate Clarifying Questions",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "7. Generate Clarifying Questions": {
+        "main": [
+          [
+            {
+              "node": "8. Send Clarifying Questions",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "9. Catch User Answers": {
+        "main": [
+          [
+            {
+              "node": "10. Generate Final JSON",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "10. Generate Final JSON": {
+        "main": [
+          [
+            {
+              "node": "11. Send Final Result",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    }
+  }
