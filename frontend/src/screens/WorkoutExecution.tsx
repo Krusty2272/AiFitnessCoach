@@ -6,6 +6,7 @@ import particleService from '../services/particleService';
 import achievementService from '../services/achievementService';
 import socialService from '../services/socialService';
 import levelService from '../services/levelService';
+import { ExerciseAnimation } from '../components/ExerciseAnimation';
 
 interface Exercise {
   id: string;
@@ -175,6 +176,7 @@ const WorkoutExecutionScreen: React.FC = () => {
     // Сохраняем тренировку в историю
     const endTime = new Date().toISOString();
     const duration = Math.floor((new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000);
+    const calories = Math.floor(duration * 8); // Примерный расчет калорий
     
     const session: WorkoutSession = {
       id: `workout_${Date.now()}`,
@@ -191,7 +193,7 @@ const WorkoutExecutionScreen: React.FC = () => {
         duration: ex.duration,
         completed: completedExercises[index] || index === currentExerciseIndex
       })),
-      calories: Math.floor(duration * 8), // Примерный расчет калорий
+      calories, // Используем ранее рассчитанные калории
       completed: true
     };
     

@@ -1,13 +1,9 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState } from 'react';
 import userProfileService, { AvatarOption } from '../services/userProfileService';
 import hapticService from '../services/hapticService';
 import particleService from '../services/particleService';
 import levelService from '../services/levelService';
-
-// Ленивая загрузка 3D компонента
-const Simple3DAvatar = lazy(() => 
-  import('./Simple3DAvatar').then(module => ({ default: module.Simple3DAvatar }))
-);
+import { AnimatedAvatar } from './AnimatedAvatar';
 
 interface AvatarSelectorProps {
   currentAvatar: string;
@@ -27,6 +23,7 @@ export const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   const avatars = userProfileService.getAllAvatars();
   const userLevel = levelService.getLevelData().level;
   const autoTheme = localStorage.getItem('autoAvatarTheme') === 'true';
+  const isPremiumUnlocked = userLevel >= 10;
 
   const handleAvatarClick = (avatar: AvatarOption) => {
     const isUnlocked = userProfileService.isAvatarUnlocked(avatar);
@@ -342,31 +339,7 @@ export const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                   }
                 }}
               >
-                {selectedCategory === 'premium' ? (
-                  <Suspense fallback={
-                    <div style={{
-                      width: '60px',
-                      height: '60px',
-                      background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '24px'
-                    }}>
-                      ⏳
-                    </div>
-                  }>
-                    <Simple3DAvatar
-                      type={avatar.name.toLowerCase().replace(/\s/g, '')}
-                      isSelected={selectedAvatar?.emoji === avatar.emoji}
-                      isLocked={isLocked}
-                      size={60}
-                    />
-                  </Suspense>
-                ) : (
-                  <span style={{ fontSize: '36px' }}>{avatar.emoji}</span>
-                )}
+                <span style={{ fontSize: '36px' }}>{avatar.emoji}</span>
                 <span style={{ 
                   fontSize: '10px',
                   fontWeight: avatar.requiredLevel ? 'bold' : 'normal'
