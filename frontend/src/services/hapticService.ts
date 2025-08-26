@@ -1,7 +1,9 @@
 import particleService from './particleService';
+import telegramService from './telegramService';
 
 class HapticService {
   private hapticEnabled: boolean = true;
+  private useTelegram: boolean = false;
 
   constructor() {
     const settings = localStorage.getItem('hapticSettings');
@@ -9,60 +11,108 @@ class HapticService {
       const parsed = JSON.parse(settings);
       this.hapticEnabled = parsed.hapticEnabled ?? true;
     }
+    
+    // Проверяем доступность Telegram WebApp
+    this.useTelegram = telegramService.isTelegramWebApp();
   }
 
   // Легкая вибрация для кнопок и переходов
   light() {
     if (!this.hapticEnabled) return;
-    this.vibrate([10]);
+    
+    if (this.useTelegram) {
+      telegramService.impactOccurred('light');
+    } else {
+      this.vibrate([10]);
+    }
   }
 
   // Средняя вибрация для уведомлений
   medium() {
     if (!this.hapticEnabled) return;
-    this.vibrate([50]);
+    
+    if (this.useTelegram) {
+      telegramService.impactOccurred('medium');
+    } else {
+      this.vibrate([50]);
+    }
   }
 
   // Сильная вибрация для важных событий
   heavy() {
     if (!this.hapticEnabled) return;
-    this.vibrate([100]);
+    
+    if (this.useTelegram) {
+      telegramService.impactOccurred('heavy');
+    } else {
+      this.vibrate([100]);
+    }
   }
 
   // Двойная вибрация для ошибок
   error() {
     if (!this.hapticEnabled) return;
-    this.vibrate([50, 50, 50]);
+    
+    if (this.useTelegram) {
+      telegramService.notificationOccurred('error');
+    } else {
+      this.vibrate([50, 50, 50]);
+    }
   }
 
   // Успех - тройная легкая вибрация
   success() {
     if (!this.hapticEnabled) return;
-    this.vibrate([30, 30, 30, 30, 30]);
+    
+    if (this.useTelegram) {
+      telegramService.notificationOccurred('success');
+    } else {
+      this.vibrate([30, 30, 30, 30, 30]);
+    }
   }
 
   // Предупреждение - длинная вибрация
   warning() {
     if (!this.hapticEnabled) return;
-    this.vibrate([200]);
+    
+    if (this.useTelegram) {
+      telegramService.notificationOccurred('warning');
+    } else {
+      this.vibrate([200]);
+    }
   }
 
   // Пульс для загрузки
   pulse() {
     if (!this.hapticEnabled) return;
-    this.vibrate([100, 100, 100, 100]);
+    
+    if (this.useTelegram) {
+      telegramService.impactOccurred('rigid');
+    } else {
+      this.vibrate([100, 100, 100, 100]);
+    }
   }
 
   // Клик для навигации
   click() {
     if (!this.hapticEnabled) return;
-    this.vibrate([20]);
+    
+    if (this.useTelegram) {
+      telegramService.selectionChanged();
+    } else {
+      this.vibrate([20]);
+    }
   }
 
   // Swipe для переключения страниц
   swipe() {
     if (!this.hapticEnabled) return;
-    this.vibrate([15, 15]);
+    
+    if (this.useTelegram) {
+      telegramService.impactOccurred('soft');
+    } else {
+      this.vibrate([15, 15]);
+    }
   }
 
   private vibrate(pattern: number | number[]) {
