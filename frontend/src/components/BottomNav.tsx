@@ -15,8 +15,9 @@ export const BottomNav: React.FC = () => {
 
   const navItems: NavItem[] = [
     { path: '/dashboard', icon: '🏠', label: 'Главная' },
-    { path: '/workout/select', icon: '💪', label: 'Тренировки' },
-    { path: '/progress', icon: '📊', label: 'Прогресс' },
+    { path: '/social', icon: '👥', label: 'Друзья' },
+    { path: '/workout/select', icon: '💪', label: 'Тренировка' },
+    { path: '/achievements', icon: '🏆', label: 'Награды' },
     { path: '/profile', icon: '👤', label: 'Профиль' }
   ];
 

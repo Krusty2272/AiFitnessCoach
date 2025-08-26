@@ -2,6 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import workoutStorage, { WorkoutSession } from '../services/workoutStorage';
 import soundService from '../services/soundService';
+import particleService from '../services/particleService';
+import achievementService from '../services/achievementService';
+import socialService from '../services/socialService';
+import levelService from '../services/levelService';
 
 interface Exercise {
   id: string;
@@ -106,6 +110,11 @@ const WorkoutExecutionScreen: React.FC = () => {
       }
     } else {
       soundService.playExerciseComplete();
+      // Добавляем эффект огня для интенсивной тренировки
+      particleService.fire(
+        window.innerWidth / 2,
+        window.innerHeight - 100
+      );
       if (currentExercise.duration) {
         startRest();
       }
@@ -146,6 +155,23 @@ const WorkoutExecutionScreen: React.FC = () => {
     setWorkoutComplete(true);
     soundService.playWorkoutComplete();
     
+    // Запускаем конфетти и эффекты
+    particleService.confetti({
+      particleCount: 100,
+      spread: 90,
+      origin: { x: 0.5, y: 0.6 }
+    });
+    
+    // Добавляем эмодзи взрыв
+    setTimeout(() => {
+      particleService.emojiExplosion(
+        '💪',
+        window.innerWidth / 2,
+        window.innerHeight / 2,
+        15
+      );
+    }, 500);
+    
     // Сохраняем тренировку в историю
     const endTime = new Date().toISOString();
     const duration = Math.floor((new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000);
@@ -170,6 +196,26 @@ const WorkoutExecutionScreen: React.FC = () => {
     };
     
     workoutStorage.addWorkoutSession(session);
+    
+    // Обновляем достижения
+    achievementService.checkAchievements();
+    achievementService.checkTimeBasedAchievements();
+    
+    // Начисляем опыт
+    const totalXP = levelService.onWorkoutComplete(duration, exercises.length, calories);
+    
+    // Опыт за каждое упражнение
+    for (let i = 0; i < exercises.length; i++) {
+      levelService.addXP('EXERCISE_COMPLETE');
+    }
+    
+    // Делимся результатом
+    socialService.shareResult({
+      workoutName: 'Интенсивная тренировка',
+      duration,
+      calories,
+      exercises: exercises.length
+    });
   };
 
   const formatTime = (seconds: number) => {

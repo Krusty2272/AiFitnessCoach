@@ -1,3 +1,5 @@
+import particleService from './particleService';
+
 class HapticService {
   private hapticEnabled: boolean = true;
 
@@ -90,6 +92,14 @@ class HapticService {
     const handler = (e: Event) => {
       e.preventDefault();
       this[type]();
+      
+      // Добавляем эффект ряби
+      if (e instanceof MouseEvent || e instanceof TouchEvent) {
+        const rect = element.getBoundingClientRect();
+        const x = e instanceof MouseEvent ? e.clientX : e.touches[0].clientX;
+        const y = e instanceof MouseEvent ? e.clientY : e.touches[0].clientY;
+        particleService.ripple(x, y);
+      }
       
       // Добавляем визуальную реакцию
       element.style.transform = 'scale(0.95)';

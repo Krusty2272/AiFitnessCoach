@@ -1,11 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { WorkoutCard, type Workout } from '../components/WorkoutCard';
 import { BottomNav } from '../components/BottomNav';
+import useSwipe from '../hooks/useSwipe';
 
 const WorkoutSelectScreen: React.FC = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Swipe navigation - WorkoutSelect is leftmost, can only swipe right to Dashboard
+  const swipe = useSwipe({
+    onSwipeRight: () => navigate('/dashboard'),
+    threshold: 75,
+    hapticFeedback: true
+  });
+  
+  useEffect(() => {
+    if (containerRef.current) {
+      const cleanup = swipe.bind(containerRef.current);
+      return cleanup;
+    }
+  }, []);
   
   const categories = [
     { value: 'all', label: 'Все' },
@@ -77,7 +93,25 @@ const WorkoutSelectScreen: React.FC = () => {
     : workouts.filter(w => w.category === selectedCategory);
 
   return (
-    <div className="app-content">
+    <div className="app-content" ref={containerRef}>
+      {/* Swipe indicator */}
+      {swipe.swipeState.swiping && swipe.swipeState.direction === 'right' && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '20px',
+            transform: 'translateY(-50%)',
+            fontSize: '40px',
+            opacity: Math.min(swipe.swipeState.distance.x / 100, 1),
+            transition: 'opacity 0.2s ease',
+            zIndex: 1000,
+            pointerEvents: 'none'
+          }}
+        >
+          🏠
+        </div>
+      )}
       <div className="app-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button 

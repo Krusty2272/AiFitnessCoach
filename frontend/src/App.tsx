@@ -7,7 +7,11 @@ import WorkoutSelectScreen from './screens/WorkoutSelect';
 import WorkoutExecutionScreen from './screens/WorkoutExecution';
 import ProgressScreen from './screens/Progress';
 import ProfileScreen from './screens/Profile';
+import SocialScreen from './screens/Social';
+import AchievementsScreen from './screens/Achievements';
+import LevelDetailsScreen from './screens/LevelDetails';
 import hapticService from './services/hapticService';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 const App: React.FC = () => {
   // Initialize haptic service
@@ -26,8 +30,9 @@ const App: React.FC = () => {
   };
 
   return (
-    <Router>
-      <div className="phone-container">
+    <ThemeProvider>
+      <Router>
+        <div className="phone-container">
         {/* iPhone Frame */}
         <div className="phone">
           {/* Side Buttons */}
@@ -63,6 +68,9 @@ const App: React.FC = () => {
               <Route path="/workout/:id" element={<WorkoutExecutionScreen />} />
               <Route path="/progress" element={<ProgressScreen />} />
               <Route path="/profile" element={<ProfileScreen />} />
+              <Route path="/social" element={<SocialScreen />} />
+              <Route path="/achievements" element={<AchievementsScreen />} />
+              <Route path="/level" element={<LevelDetailsScreen />} />
             </Routes>
             
             {/* Home Indicator */}
@@ -70,7 +78,8 @@ const App: React.FC = () => {
           </div>
         </div>
       </div>
-    </Router>
+      </Router>
+    </ThemeProvider>
   );
 };
 

@@ -1,15 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BottomNav } from '../components/BottomNav';
 import { useUser } from '../hooks/useUser';
 import workoutStorage from '../services/workoutStorage';
 import soundService from '../services/soundService';
+import useSwipe from '../hooks/useSwipe';
+import { useTheme } from '../contexts/ThemeContext';
+import particleService from '../services/particleService';
+import hapticService from '../services/hapticService';
+import levelService from '../services/levelService';
+import { LevelProgress } from '../components/LevelProgress';
+import userProfileService from '../services/userProfileService';
+import { AvatarSelector } from '../components/AvatarSelector';
 
 const ProfileScreen: React.FC = () => {
   const navigate = useNavigate();
   const { user, updateUser, clearUser } = useUser();
   const [isEditing, setIsEditing] = useState(false);
   const [soundSettings, setSoundSettings] = useState(soundService.getSettings());
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { theme, toggleTheme, isLight } = useTheme();
+  const [userProfile, setUserProfile] = useState(userProfileService.getProfile());
+  const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  const [editingNickname, setEditingNickname] = useState(false);
+  const [nicknameInput, setNicknameInput] = useState(userProfile.nickname);
+  const [nicknameError, setNicknameError] = useState('');
+  const [autoAvatarTheme, setAutoAvatarTheme] = useState(
+    localStorage.getItem('autoAvatarTheme') === 'true'
+  );
+  
+  // Swipe navigation - Profile is rightmost, can only swipe left to Progress
+  const swipe = useSwipe({
+    onSwipeLeft: () => navigate('/progress'),
+    threshold: 75,
+    hapticFeedback: true
+  });
+  
   const [formData, setFormData] = useState({
     fitness_goal: '',
     experience_level: '',
@@ -29,6 +55,13 @@ const ProfileScreen: React.FC = () => {
       });
     }
   }, [user]);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      const cleanup = swipe.bind(containerRef.current);
+      return cleanup;
+    }
+  }, []);
 
   const goals = [
     { value: 'weight_loss', label: 'Похудение', emoji: '🔥' },
@@ -88,7 +121,25 @@ const ProfileScreen: React.FC = () => {
   const bmiCategory = bmi ? getBMICategory(Number(bmi)) : null;
 
   return (
-    <div className="app-content">
+    <div className="app-content" ref={containerRef}>
+      {/* Swipe indicator */}
+      {swipe.swipeState.swiping && swipe.swipeState.direction === 'left' && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: '50%',
+            right: '20px',
+            transform: 'translateY(-50%)',
+            fontSize: '40px',
+            opacity: Math.min(swipe.swipeState.distance.x / 100, 1),
+            transition: 'opacity 0.2s ease',
+            zIndex: 1000,
+            pointerEvents: 'none'
+          }}
+        >
+          📊
+        </div>
+      )}
       <div className="app-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1>Профиль</h1>
@@ -116,23 +167,191 @@ const ProfileScreen: React.FC = () => {
           alignItems: 'center',
           marginBottom: '30px'
         }}>
-          <div style={{
-            width: '100px',
-            height: '100px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '48px',
-            marginBottom: '15px'
-          }}>
-            👤
+          <div 
+            onClick={() => {
+              setShowAvatarSelector(true);
+              hapticService.click();
+            }}
+            style={{
+              width: '100px',
+              height: '100px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '48px',
+              marginBottom: '15px',
+              position: 'relative',
+              cursor: 'pointer',
+              transition: 'transform 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            {userProfile.avatar}
+            {/* Кнопка редактирования */}
+            <div style={{
+              position: 'absolute',
+              bottom: '0',
+              right: '0',
+              background: 'var(--background-card)',
+              borderRadius: '50%',
+              width: '30px',
+              height: '30px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '16px',
+              border: '2px solid var(--background-primary)'
+            }}>
+              ✏️
+            </div>
+            {/* Бейдж уровня */}
+            <div style={{
+              position: 'absolute',
+              top: '-5px',
+              right: '-5px',
+              background: 'linear-gradient(135deg, #ffd700, #ffed4e)',
+              borderRadius: '50%',
+              width: '35px',
+              height: '35px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              color: 'black',
+              border: '3px solid var(--background-primary)',
+              boxShadow: '0 2px 8px rgba(255, 215, 0, 0.4)'
+            }}>
+              {levelService.getLevelData().level}
+            </div>
           </div>
-          <h2 style={{ marginBottom: '5px' }}>Пользователь</h2>
+          
+          {/* Никнейм */}
+          {editingNickname ? (
+            <div style={{ width: '100%', maxWidth: '250px' }}>
+              <input
+                type="text"
+                value={nicknameInput}
+                onChange={(e) => {
+                  setNicknameInput(e.target.value);
+                  const validation = userProfileService.validateNickname(e.target.value);
+                  setNicknameError(!validation.valid ? validation.error || '' : '');
+                }}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    const validation = userProfileService.validateNickname(nicknameInput);
+                    if (validation.valid) {
+                      userProfileService.updateNickname(nicknameInput);
+                      setUserProfile(userProfileService.getProfile());
+                      setEditingNickname(false);
+                      hapticService.success();
+                      particleService.stars(window.innerWidth / 2, 200);
+                    }
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  background: 'var(--background-card)',
+                  border: nicknameError ? '1px solid #ef4444' : '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  color: 'var(--text-primary)',
+                  textAlign: 'center',
+                  fontSize: '18px',
+                  fontWeight: 'bold'
+                }}
+                autoFocus
+              />
+              {nicknameError && (
+                <div style={{ 
+                  color: '#ef4444', 
+                  fontSize: '12px', 
+                  marginTop: '5px',
+                  textAlign: 'center'
+                }}>
+                  {nicknameError}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                <button
+                  onClick={() => {
+                    const validation = userProfileService.validateNickname(nicknameInput);
+                    if (validation.valid) {
+                      userProfileService.updateNickname(nicknameInput);
+                      setUserProfile(userProfileService.getProfile());
+                      setEditingNickname(false);
+                      hapticService.success();
+                      particleService.stars(window.innerWidth / 2, 200);
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    background: 'var(--primary-gradient)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: 'white',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✓ Сохранить
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingNickname(false);
+                    setNicknameInput(userProfile.nickname);
+                    setNicknameError('');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    background: 'var(--background-card)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: 'white',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✕ Отмена
+                </button>
+              </div>
+            </div>
+          ) : (
+            <h2 
+              onClick={() => {
+                setEditingNickname(true);
+                hapticService.light();
+              }}
+              style={{ 
+                marginBottom: '5px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              {userProfile.nickname}
+              <span style={{ fontSize: '16px', opacity: 0.5 }}>✏️</span>
+            </h2>
+          )}
+          
           <p style={{ color: '#8e8e93', fontSize: '14px' }}>
-            Активный пользователь
+            {levelService.getLevelData().rank} {levelService.getLevelData().rankIcon}
           </p>
+        </div>
+        
+        {/* Прогресс уровня */}
+        <div style={{ marginBottom: '20px' }}>
+          <LevelProgress />
         </div>
 
         {/* Основная информация */}
@@ -347,6 +566,52 @@ const ProfileScreen: React.FC = () => {
               alignItems: 'center',
               padding: '10px 0'
             }}>
+              <span style={{ color: 'var(--text-primary)', fontSize: '16px' }}>
+                {isLight ? '☀️' : '🌙'} Тема
+              </span>
+              <button
+                onClick={() => {
+                  toggleTheme();
+                  particleService.stars(
+                    window.innerWidth / 2,
+                    window.innerHeight / 2
+                  );
+                }}
+                style={{
+                  width: '50px',
+                  height: '28px',
+                  borderRadius: '14px',
+                  background: isLight ? '#ffd700' : '#667eea',
+                  border: 'none',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  transition: 'background 0.3s'
+                }}
+              >
+                <div style={{
+                  position: 'absolute',
+                  top: '3px',
+                  left: isLight ? '25px' : '3px',
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  transition: 'left 0.3s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '12px'
+                }}>
+                  {isLight ? '☀️' : '🌙'}
+                </div>
+              </button>
+            </div>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '10px 0'
+            }}>
               <span style={{ color: 'white', fontSize: '16px' }}>🔊 Звуки</span>
               <button
                 onClick={() => {
@@ -430,6 +695,58 @@ const ProfileScreen: React.FC = () => {
               <span>🔔 Уведомления</span>
               <span style={{ color: '#8e8e93' }}>→</span>
             </button>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '10px 0'
+            }}>
+              <span style={{ color: 'var(--text-primary)', fontSize: '16px' }}>
+                🎨 Тема по аватарке
+              </span>
+              <button
+                onClick={() => {
+                  const newState = !autoAvatarTheme;
+                  setAutoAvatarTheme(newState);
+                  localStorage.setItem('autoAvatarTheme', String(newState));
+                  
+                  if (newState) {
+                    // Применяем тему текущей аватарки
+                    const avatar = userProfileService.findAvatarByEmoji(userProfile.avatar);
+                    if (avatar?.theme) {
+                      userProfileService.applyAvatarTheme(avatar.theme);
+                      particleService.stars(window.innerWidth / 2, window.innerHeight / 2);
+                    }
+                  } else {
+                    // Возвращаем дефолтную тему
+                    userProfileService.resetTheme();
+                    toggleTheme(); // Сбрасываем на текущую
+                  }
+                }}
+                style={{
+                  width: '50px',
+                  height: '28px',
+                  borderRadius: '14px',
+                  background: autoAvatarTheme ? '#667eea' : 'rgba(255,255,255,0.2)',
+                  border: 'none',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  transition: 'background 0.3s'
+                }}
+              >
+                <div style={{
+                  position: 'absolute',
+                  top: '3px',
+                  left: autoAvatarTheme ? '25px' : '3px',
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  transition: 'left 0.3s'
+                }} />
+              </button>
+            </div>
 
             <button
               style={{
@@ -522,6 +839,22 @@ const ProfileScreen: React.FC = () => {
       </div>
       
       <BottomNav />
+      
+      {/* Модальное окно выбора аватара */}
+      {showAvatarSelector && (
+        <AvatarSelector
+          currentAvatar={userProfile.avatar}
+          onSelect={(avatar, category) => {
+            userProfileService.updateAvatar(avatar, category);
+            setUserProfile(userProfileService.getProfile());
+            setShowAvatarSelector(false);
+            
+            // Начисляем опыт за смену аватара
+            levelService.addXP('ACHIEVEMENT_UNLOCK', 0.2);
+          }}
+          onClose={() => setShowAvatarSelector(false)}
+        />
+      )}
     </div>
   );
 };

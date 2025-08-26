@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BottomNav } from '../components/BottomNav';
 import workoutStorage from '../services/workoutStorage';
+import useSwipe from '../hooks/useSwipe';
+import usePullToRefresh from '../hooks/usePullToRefresh';
+import { SkeletonStatCard, SkeletonProgressChart, SkeletonCard } from '../components/Skeleton';
+import { RefreshIndicator } from '../components/RefreshIndicator';
 
 interface WeekData {
   day: string;
@@ -13,11 +17,54 @@ const ProgressScreen: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('week');
   const [stats, setStats] = useState(workoutStorage.getUserStats());
   const [workoutHistory, setWorkoutHistory] = useState(workoutStorage.getWorkoutHistory());
+  const [isLoading, setIsLoading] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Swipe navigation - Progress is between Dashboard (left) and Profile (right)
+  const swipe = useSwipe({
+    onSwipeLeft: () => navigate('/profile'),
+    onSwipeRight: () => navigate('/dashboard'),
+    threshold: 75,
+    hapticFeedback: true
+  });
+
+  // Pull to refresh
+  const pullToRefresh = usePullToRefresh({
+    onRefresh: async () => {
+      // Simulate data refresh
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Refresh stats and history
+      setStats(workoutStorage.getUserStats());
+      setWorkoutHistory(workoutStorage.getWorkoutHistory());
+    },
+    threshold: 80,
+    hapticFeedback: true
+  });
   
   useEffect(() => {
-    // Обновляем данные при загрузке
-    setStats(workoutStorage.getUserStats());
-    setWorkoutHistory(workoutStorage.getWorkoutHistory());
+    // Simulate loading delay
+    setTimeout(() => {
+      // Обновляем данные при загрузке
+      setStats(workoutStorage.getUserStats());
+      setWorkoutHistory(workoutStorage.getWorkoutHistory());
+      setIsLoading(false);
+    }, 800);
+  }, []);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      const cleanup = swipe.bind(containerRef.current);
+      return cleanup;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      const cleanup = pullToRefresh.bind(scrollRef.current);
+      return cleanup;
+    }
   }, []);
 
   // Получаем данные активности за неделю
@@ -50,15 +97,62 @@ const ProgressScreen: React.FC = () => {
   const maxValue = Math.max(...getChartData());
 
   return (
-    <div className="app-content">
+    <div className="app-content" ref={containerRef}>
+      {/* Swipe indicator */}
+      {swipe.swipeState.swiping && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: swipe.swipeState.direction === 'right' ? '20px' : 'auto',
+            right: swipe.swipeState.direction === 'left' ? '20px' : 'auto',
+            transform: 'translateY(-50%)',
+            fontSize: '40px',
+            opacity: Math.min(swipe.swipeState.distance.x / 100, 1),
+            transition: 'opacity 0.2s ease',
+            zIndex: 1000,
+            pointerEvents: 'none'
+          }}
+        >
+          {swipe.swipeState.direction === 'left' ? '👤' : '🏠'}
+        </div>
+      )}
       <div className="app-header">
         <h1>Ваш прогресс</h1>
         <p>Отслеживайте свои достижения</p>
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', paddingBottom: '100px' }}>
+      <div 
+        ref={scrollRef}
+        style={{ 
+          flex: 1, 
+          overflow: 'auto', 
+          paddingBottom: '100px',
+          position: 'relative'
+        }}
+      >
+        <RefreshIndicator 
+          pullDistance={pullToRefresh.pullState.pullDistance}
+          isPulling={pullToRefresh.pullState.isPulling}
+          isRefreshing={pullToRefresh.pullState.isRefreshing}
+          canRefresh={pullToRefresh.pullState.canRefresh}
+          threshold={pullToRefresh.threshold}
+        />
         <div style={{ padding: '0 20px' }}>
         {/* Статистика */}
+        {isLoading ? (
+          <>
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+            </div>
+            <SkeletonCard lines={4} />
+            <SkeletonProgressChart />
+          </>
+        ) : (
+          <>
         <div className="grid grid-cols-2 gap-3 mb-5">
           <div className="card animate-fadeIn" style={{
             background: 'var(--primary-gradient)',
@@ -269,6 +363,8 @@ const ProgressScreen: React.FC = () => {
             </div>
           </div>
         </div>
+          </>
+        )}
         </div>
       </div>
       
