@@ -1,0 +1,12 @@
+{
+  "projectId": "prj_nuPG525r4h1QHnW2OC5egzr4Dzhe",
+  "orgId": "team_your_team_id",
+  "settings": {
+    "rootDirectory": "frontend",
+    "framework": "vite",
+    "nodeVersion": "18.x",
+    "installCommand": "npm install --legacy-peer-deps",
+    "buildCommand": "npm run build",
+    "outputDirectory": "dist"
+  }
+}
