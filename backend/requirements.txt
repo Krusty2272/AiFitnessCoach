@@ -31,8 +31,8 @@ httpx==0.25.2
 pydantic==2.5.0
 pydantic-settings==2.1.0
 
-# AI Services (базовые)
-openai==1.3.5
+# AI Services
+google-generativeai==0.3.2
 
 # Authentication
 python-jose[cryptography]==3.3.0

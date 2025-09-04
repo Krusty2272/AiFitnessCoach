@@ -1,4 +1,4 @@
-import { initData, miniApp, themeParams, viewport, backButton, mainButton, hapticFeedback, cloudStorage, biometrics } from '@telegram-apps/sdk-react';
+import { initData, miniApp, themeParams, viewport, backButton, mainButton, hapticFeedback, cloudStorage } from '@telegram-apps/sdk-react';
 
 export interface TelegramUser {
   id: number;
@@ -216,21 +216,13 @@ class TelegramService {
     }
   }
 
-  // Биометрия (если доступна)
+  // Биометрия (временно отключена)
   async requestBiometrics(reason: string): Promise<boolean> {
     if (!this.isInitialized) return false;
     
-    try {
-      if (biometrics.isSupported()) {
-        biometrics.mount();
-        const result = await biometrics.authenticate({ reason });
-        return result.status === 'authorized';
-      }
-      return false;
-    } catch (error) {
-      console.error('Biometrics failed:', error);
-      return false;
-    }
+    // Биометрия пока не поддерживается в текущей версии SDK
+    console.warn('Biometrics not supported in current SDK version');
+    return false;
   }
 
   // Применение темы к приложению

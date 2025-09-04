@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     REDIS_SESSION_URL: str = "redis://localhost:6379/2"
     
     # AI Services
+    GEMINI_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
     GOOGLE_CLOUD_PROJECT_ID: Optional[str] = None

@@ -2,16 +2,16 @@
 User model for MVP
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Float, JSON
 from sqlalchemy.sql import func
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from app.core.database import Base
 
 
 class User(Base):
-    """User model for MVP"""
+    """User model with extended fields for Telegram integration"""
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -19,18 +19,35 @@ class User(Base):
     username = Column(String(100), nullable=True)
     first_name = Column(String(100), nullable=True)
     last_name = Column(String(100), nullable=True)
+    language_code = Column(String(10), default='ru')
+    is_premium = Column(Boolean, default=False)
     
-    # Basic fitness info
+    # Fitness profile
     fitness_goal = Column(String(50), nullable=True)  # 'weight_loss', 'muscle_gain', 'strength', 'endurance'
     experience_level = Column(String(50), nullable=True)  # 'beginner', 'intermediate', 'advanced'
-    weight = Column(Integer, nullable=True)  # in kg
-    height = Column(Integer, nullable=True)  # in cm
+    weight = Column(Float, nullable=True)  # in kg
+    height = Column(Float, nullable=True)  # in cm
     age = Column(Integer, nullable=True)
+    goals = Column(JSON, default=list)  # Multiple goals
     
-    # App settings
+    # Progress tracking
+    level = Column(Integer, default=1)
+    experience = Column(Integer, default=0)
+    streak_days = Column(Integer, default=0)
+    last_workout_date = Column(DateTime(timezone=True), nullable=True)
+    total_workouts = Column(Integer, default=0)
+    total_minutes = Column(Integer, default=0)
+    calories_burned = Column(Integer, default=0)
+    
+    # Settings
+    preferences = Column(JSON, default=dict)
+    notification_settings = Column(JSON, default=dict)
+    
+    # System fields
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    last_active = Column(DateTime(timezone=True), default=func.now())
 
 
 # Pydantic models for API

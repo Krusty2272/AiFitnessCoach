@@ -24,6 +24,7 @@
     "@twa-dev/sdk": "^7.0.0",
     "axios": "^1.5.0",
     "chart.js": "^4.4.0",
+    "chartjs-adapter-date-fns": "^3.0.0",
     "clsx": "^2.0.0",
     "date-fns": "^2.30.0",
     "framer-motion": "^10.16.4",
