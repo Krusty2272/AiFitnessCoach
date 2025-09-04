@@ -1,0 +1,7 @@
+.husky
+.git
+.github
+node_modules
+*.log
+.env.local
+.env.development
